@@ -154,8 +154,8 @@ class ClippedStepLR(optim.lr_scheduler._LRScheduler):
     
 def criterion(pred_flow, flow, mask):
     point_distance_l2 = torch.sum((pred_flow - flow) * (pred_flow - flow), dim=1) / 2.0
-    length_difference_l1 = torch.abs(torch.norm(pred_flow, dim=1) - torch.norm(flow, dim=1))
-    loss_tensor = point_distance_l2 + length_difference_l1
+    # length_difference_l1 = torch.abs(torch.norm(pred_flow, dim=1) - torch.norm(flow, dim=1))
+    loss_tensor = point_distance_l2 # + length_difference_l1
     loss = torch.mean(loss_tensor * mask)
     return loss
 
@@ -268,13 +268,27 @@ for epoch in range(NUM_EPOCHS):
         features2 = features2.cuda(non_blocking=True)
         flow = flow.cuda(non_blocking=True)
         mask1 = mask1.cuda(non_blocking=True)
+
+        # Data augmentation
+        flow_no_movement = torch.zeros_like(flow)
+        mask_no_movement = torch.ones_like(mask1)
+        points1_noised = points1 + 0.01 * torch.randn_like(points1)
+        features1_noised = features1 + 0.01 * torch.randn_like(features1)
         
         # zero the parameter gradients
         optimizer.zero_grad()
         
         # forward + backward + optimize
+        loss = 0
+        
+        # Penalize for actual data movement.
         pred_flow = net(points1, points2, features1, features2)
-        loss = criterion(pred_flow, flow, mask1)
+        loss += criterion(pred_flow, flow, mask1)
+
+        # Train to detect zero flow under noise.
+        pred_flow_zero = net(points1, points1_noised, features1, features1_noised)
+        loss += criterion(pred_flow_zero, flow_no_movement, mask_no_movement)
+
         loss.backward()
         optimizer.step()
         
