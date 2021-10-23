@@ -153,7 +153,10 @@ class ClippedStepLR(optim.lr_scheduler._LRScheduler):
                 for base_lr in self.base_lrs]
     
 def criterion(pred_flow, flow, mask):
-    loss = torch.mean(mask * torch.sum((pred_flow - flow) * (pred_flow - flow), dim=1) / 2.0)
+    point_distance_l2 = torch.sum((pred_flow - flow) * (pred_flow - flow), dim=1) / 2.0
+    length_difference_l1 = torch.abs(torch.norm(pred_flow, dim=1) - torch.norm(flow, dim=1))
+    loss_tensor = point_distance_l2 + length_difference_l1
+    loss = torch.mean(loss_tensor * mask)
     return loss
 
 def error(pred, labels, mask):
@@ -334,7 +337,7 @@ for epoch in range(NUM_EPOCHS):
     
 plt.plot(losses_train, label='train')
 plt.plot(losses_test, label='test')
-plt.savefig('models/losses.png')
+plt.savefig(args.model_output + '_losses.png')
 
 net = net.cpu()
-torch.save(net.state_dict(),'models/net_self_trained.pth')
+torch.save(net.state_dict(), args.model_output)
