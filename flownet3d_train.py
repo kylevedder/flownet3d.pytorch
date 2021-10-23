@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from flownet3d import FlowNet3D
 
 import glob
@@ -22,8 +23,21 @@ from kaolin.models.PointNet2 import group_gather_by_index
 from kaolin.models.PointNet2 import three_nn
 from kaolin.models.PointNet2 import three_interpolate
 
+import argparse
+from pathlib import Path
+
+"""Get dataset path argument and model output argument"""
+parser = argparse.ArgumentParser(description='FlowNet3D')
+parser.add_argument('model_output', type=str, help='model output')
+parser.add_argument('--dataset_path', type=str, default='/Datasets/flyingthings3d', help='dataset path root')
+args = parser.parse_args()
+
+if len(Path(args.model_output).parents) > 0:
+    Path(args.model_output).parents[0].mkdir(parents=True, exist_ok=True)
+
+
 class SceneflowDataset(Dataset):
-    def __init__(self, npoints=2048, root='/Datasets/flyingthings3d', train=True, cache=None):
+    def __init__(self, npoints=2048, root=args.dataset_path, train=True, cache=None):
         self.npoints = npoints
         self.train = train
         self.root = root
@@ -31,6 +45,8 @@ class SceneflowDataset(Dataset):
             self.datapath = glob.glob(os.path.join(self.root, 'TRAIN*.npz'))
         else:
             self.datapath = glob.glob(os.path.join(self.root, 'TEST*.npz'))
+
+        print(f"Found {len(self.datapath)} {'train' if self.train else 'test'} files in {root}")
         
         if cache is None:
             self.cache = {}
