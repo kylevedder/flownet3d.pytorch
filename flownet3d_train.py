@@ -29,7 +29,7 @@ from pathlib import Path
 """Get dataset path argument and model output argument"""
 parser = argparse.ArgumentParser(description='FlowNet3D')
 parser.add_argument('model_output', type=str, help='model output')
-parser.add_argument('--dataset_path', type=str, default='/Datasets/flyingthings3d', help='dataset path root')
+parser.add_argument('--dataset_path', type=str, default='/Datasets/flyingthings3d/data_processed_maxcut_35_20k_2k_8192/', help='dataset path root')
 args = parser.parse_args()
 
 if len(Path(args.model_output).parents) > 0:
