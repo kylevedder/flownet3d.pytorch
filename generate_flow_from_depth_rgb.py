@@ -297,7 +297,7 @@ def save_point_cloud_and_flow_as_npz(idx, pc1, pc2, flow):
         'color1': np.asarray(pc1.colors) / 255,
         'color2': np.asarray(pc2.colors) / 255,
         'flow': flow,
-        'valid_mask1': np.ones(flow.shape[:2], dtype=bool)
+        'valid_mask1': np.ones(flow.shape[:1], dtype=bool)
     }
     np.savez_compressed(file, **out_dict)
 
