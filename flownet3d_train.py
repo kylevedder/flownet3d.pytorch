@@ -194,6 +194,8 @@ MIN_BN_MOMENTUM = 0.01
 STEP_SIZE_BN_MOMENTUM = 10
 GAMMA_BN_MOMENTUM = 0.5
 
+NOISE_SCALE = 0.0005
+
 # data
 train_manager = Manager()
 train_cache = train_manager.dict()
@@ -272,8 +274,8 @@ for epoch in range(NUM_EPOCHS):
         # Data augmentation
         flow_no_movement = torch.zeros_like(flow)
         mask_no_movement = torch.ones_like(mask1)
-        points1_noised = points1 + 0.01 * torch.randn_like(points1)
-        features1_noised = features1 + 0.01 * torch.randn_like(features1)
+        points1_noised = points1 + NOISE_SCALE * torch.randn_like(points1)
+        features1_noised = features1 + NOISE_SCALE * torch.randn_like(features1)
         
         # zero the parameter gradients
         optimizer.zero_grad()
