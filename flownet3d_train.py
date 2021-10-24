@@ -345,6 +345,7 @@ for epoch in range(NUM_EPOCHS):
 
         # output
         print('Epoch {} (test) -- loss: {:.6f} -- duration (epoch/iteration): {:.4f} min/{:.4f} sec'.format(epoch, running_loss, (end_time-start_time)/60.0, (end_time-start_time)/len(train_loader)))
+        torch.save(net.cpu().state_dict(), args.model_output + f".epoch_{epoch:06d}.pth")
         
     # update learning rate
     lr_scheduler.step()
