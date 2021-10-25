@@ -283,7 +283,7 @@ for epoch in range(NUM_EPOCHS):
             flow_no_movement = torch.zeros_like(flow)
         else:
             # Generates a random movement with components of magnitude at most MOVEMENT_MAGNITUDE
-            flow_no_movement = ((torch.rand((1, flow.shape[1]), device=flow.device, dtype=flow.dtype) - 0.5) * MOVEMENT_MAGNITUDE * 2).repeat(flow.shape[0], 1)
+            flow_no_movement = ((torch.rand((flow.shape[0], flow.shape[1], 1), device=flow.device, dtype=flow.dtype) - 0.5) * MOVEMENT_MAGNITUDE * 2).repeat(1, 1, flow.shape[2])
             points1_noised += flow_no_movement
         
         # zero the parameter gradients
