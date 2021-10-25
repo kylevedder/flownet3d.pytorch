@@ -61,8 +61,13 @@ def get_rgbd_odoms(input_dir: str):
     depth_imgs = sorted(glob.glob(input_dir + "/depth_*.png"))
     rgb_imgs = sorted(glob.glob(input_dir + "/rgb_*.png"))
     odom_infos = sorted(glob.glob(input_dir + "/odom_*.npy"))
+    # depth_imgs = depth_imgs[max_frames:max_frames*2]
+    # rgb_imgs = rgb_imgs[max_frames:max_frames*2]
+    # odom_infos = odom_infos[max_frames:max_frames*2]
     assert len(depth_imgs) == len(
         rgb_imgs), f"{len(depth_imgs)} vs {len(rgb_imgs)}"
+
+    
 
     depth_imgs = [o3d.io.read_image(e) for e in depth_imgs]
     rgb_imgs = [o3d.io.read_image(e) for e in rgb_imgs]
@@ -81,7 +86,7 @@ def get_rgbd_odoms(input_dir: str):
                 rgb,
                 depth,
                 depth_scale=1000,  # Converts from mm to meters.
-                depth_trunc=7,  # Truncate the depth image in meters.
+                depth_trunc=4,  # Truncate the depth image in meters.
                 convert_rgb_to_intensity=False),
             odom) for rgb, depth, odom in zip(rgb_imgs, depth_imgs, odom_infos)
     ]
@@ -95,9 +100,9 @@ def rgbd_odom_to_pc(rgbd, odom, camera_intrinsics):
     pc = o3d.geometry.PointCloud.create_from_rgbd_image(
         rgbd, camera_intrinsics)
     pc_to_robot_frame = [[0, 0, 1], [-1, 0, 0], [0, -1, 0]]
-    pc.transform(odom)
     pc.rotate(pc_to_robot_frame, [0, 0, 0])
-    pc = pc.voxel_down_sample(0.1)
+    pc.transform(odom)
+    # pc = pc.voxel_down_sample(0.1)
     return pc
 
 
@@ -201,10 +206,10 @@ rgbd_odoms = get_rgbd_odoms(args.input_dir)
 pcs = [
     rgbd_odom_to_pc(rgbd, odom, camera_intrinsics) for rgbd, odom in rgbd_odoms
 ]
-pc_pairs = list(zip(pcs, pcs[2:]))
+pc_pairs = list(zip(pcs, pcs[1:]))
 pc_pairs = [resize_pc_pairs(*e) for e in pc_pairs]
 
-model_pc = pc_pairs[16]
+model_pc = pc_pairs[200]
 
 
 # o3d.utility.set_verbosity_level(o3d.utility.Debug)
@@ -217,16 +222,11 @@ flow = eval_flow(*model_pc)
 lineset, flowd_pc = flow_to_lineset(model_pc[0], flow)
 print(f"Flow shape: {flow.shape}")
 
-# model_pc[0].rotate(rbt_to_flow_frame, center=[0, 0, 0])
-# model_pc[1].rotate(rbt_to_flow_frame, center=[0, 0, 0])
 viewer.add_geometry(model_pc[0])
 viewer.add_geometry(model_pc[1])
-# viewer.add_geometry(o3d.geometry.LineSet.create_from_point_cloud_correspondences(
-#         model_pc[0], model_pc[1], [(i, i) for i in range(len(model_pc[0].points))]).paint_uniform_color((0, 1, 0)))
-# viewer.add_geometry(flowd_pc)
 viewer.add_geometry(lineset)
 
-# for idx, pc in enumerate(pcs[15:17]):
+# for idx, pc in enumerate(pcs):
 #     viewer.add_geometry(pc)
 
 view = viewer.get_view_control()
