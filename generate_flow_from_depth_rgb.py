@@ -207,8 +207,17 @@ def rotate_point_cloud_region_and_generate_flow(
                                               size=(2, )),
                             degrees=True).as_matrix()
 
+    def generate_random_translation_vector(max_translation=0.12):
+        """
+        Generate random translation vector with at most max_translation.
+        """
+        return np.random.uniform(-max_translation,
+                                 max_translation,
+                                 size=(1, 3))
+
     def apply_rotation_to_point_cloud_region(point_cloud, bounding_box,
-                                             rotation_matrix):
+                                             rotation_matrix,
+                                             translation_vector):
         """
         Applies rotation to the point cloud region on a random corner.
         """
@@ -227,6 +236,8 @@ def rotate_point_cloud_region_and_generate_flow(
         box_points_np = (rotation_matrix @ box_points_np.T).T
         # Translate the points back to the rotation center
         box_points_np += rotation_center
+        # Translate the points by the translation vector
+        box_points_np += translation_vector
         # Assign the rotated points and colors to the point cloud
         full_points_np[box_point_idxs] = box_points_np
         point_cloud.points = o3d.utility.Vector3dVector(full_points_np)
@@ -262,10 +273,18 @@ def rotate_point_cloud_region_and_generate_flow(
         for _ in range(len(random_bounding_boxes))
     ]
 
+    # Generate random translation vectors
+    random_translation_vectors = [
+        generate_random_translation_vector()
+        for _ in range(len(random_bounding_boxes))
+    ]
+
     # Apply the random rotation matrices to the point cloud regions
-    for bb, rotation_matrix in zip(random_bounding_boxes,
-                                   random_rotation_matrices):
-        apply_rotation_to_point_cloud_region(point_cloud, bb, rotation_matrix)
+    for bb, rotation_matrix, translation_vector in zip(
+            random_bounding_boxes, random_rotation_matrices,
+            random_translation_vectors):
+        apply_rotation_to_point_cloud_region(point_cloud, bb, rotation_matrix,
+                                             translation_vector)
 
     # # Visualize the random bounding boxes using Open3d
     # o3d.visualization.draw_geometries(random_bounding_boxes + [point_cloud])
@@ -286,11 +305,11 @@ def point_clouds_to_line_set(pc1, pc2):
     return lineset
 
 
-def save_point_cloud_and_flow_as_npz(idx, pc1, pc2, flow):
+def save_point_cloud_and_flow_as_npz(idx, itr, pc1, pc2, flow):
     """
     Saves the given point cloud and flow as a npz file.
     """
-    file = f'{args.dataset_path}/TRAIN_robot_pc_{idx:06d}.npz'
+    file = f'{args.dataset_path}/TRAIN_robot_pc_{idx:06d}_itr_{itr:02d}.npz'
     out_dict = {
         'points1': np.asarray(pc1.points),
         'points2': np.asarray(pc2.points),
@@ -307,13 +326,15 @@ def process_rgb_and_depth(val):
     print(f'Processing {idx:06d}')
     rgbd = rgb_depth_files_to_rgbd(rgb_file, depth_file)
     pc = rgbd_to_point_cloud(rgbd, camera_intrinsics)
-    pc_in, pc_out, flow = rotate_point_cloud_region_and_generate_flow(pc)
-    save_point_cloud_and_flow_as_npz(idx, pc_in, pc_out, flow)
+    for itr in range(3):
+        pc_in, pc_out, flow = rotate_point_cloud_region_and_generate_flow(pc)
+        save_point_cloud_and_flow_as_npz(idx, itr, pc_in, pc_out, flow)
+
 
 camera_intrinsics = load_intrinsic_matrix(args.dataset_path)
 rgb_and_depth_files = get_rgb_depth_files(args.dataset_path)
 
-# Use multiprocessing to iterate over rgb_and_depth_files and process 
+# Use multiprocessing to iterate over rgb_and_depth_files and process
 # them with process_rgb_and_depth.
 with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
     pool.map(process_rgb_and_depth, enumerate(rgb_and_depth_files))

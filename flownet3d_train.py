@@ -195,6 +195,7 @@ STEP_SIZE_BN_MOMENTUM = 10
 GAMMA_BN_MOMENTUM = 0.5
 
 NOISE_SCALE = 0.0005
+MOVEMENT_MAGNITUDE = 0.05
 
 # data
 train_manager = Manager()
@@ -271,11 +272,19 @@ for epoch in range(NUM_EPOCHS):
         flow = flow.cuda(non_blocking=True)
         mask1 = mask1.cuda(non_blocking=True)
 
-        # Data augmentation
-        flow_no_movement = torch.zeros_like(flow)
+        # Data augmentation via movement
         mask_no_movement = torch.ones_like(mask1)
         points1_noised = points1 + NOISE_SCALE * torch.randn_like(points1)
         features1_noised = features1 + NOISE_SCALE * torch.randn_like(features1)
+
+        # Coinflip to generate no movement vs movement
+        if np.random.rand() < 0.5:
+            # No movement
+            flow_no_movement = torch.zeros_like(flow)
+        else:
+            # Generates a random movement with components of magnitude at most MOVEMENT_MAGNITUDE
+            flow_no_movement = ((torch.rand((1, flow.shape[1]), device=flow.device, dtype=flow.dtype) - 0.5) * MOVEMENT_MAGNITUDE * 2).repeat(flow.shape[0], 1)
+            points1_noised += flow_no_movement
         
         # zero the parameter gradients
         optimizer.zero_grad()
