@@ -26,10 +26,22 @@ from kaolin.models.PointNet2 import three_interpolate
 import argparse
 from pathlib import Path
 
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v.lower() in ('yes', 'true', 't', 'y', '1'):
+        return True
+    elif v.lower() in ('no', 'false', 'f', 'n', '0'):
+        return False
+    else:
+        raise argparse.ArgumentTypeError('Boolean value expected.')
+
 """Get dataset path argument and model output argument"""
 parser = argparse.ArgumentParser(description='FlowNet3D')
 parser.add_argument('model_output', type=str, help='model output')
 parser.add_argument('--dataset_path', type=str, default='/Datasets/flyingthings3d/data_processed_maxcut_35_20k_2k_8192/', help='dataset path root')
+# Add boolean argument to specify whether to use flyingthings dataset or not
+parser.add_argument('--use_flyingthings', type=str2bool, default=True, help='use flyingthings dataset')
 args = parser.parse_args()
 
 if len(Path(args.model_output).parents) > 0:
@@ -42,7 +54,10 @@ class SceneflowDataset(Dataset):
         self.train = train
         self.root = root
         if self.train:
-            self.datapath = glob.glob(os.path.join(self.root, 'TRAIN*.npz'))
+            if args.use_flyingthings:
+                self.datapath = glob.glob(os.path.join(self.root, 'TRAIN*.npz'))
+            else:
+                self.datapath = glob.glob(os.path.join(self.root, 'TRAIN_robot*.npz'))
         else:
             self.datapath = glob.glob(os.path.join(self.root, 'TEST*.npz'))
 
